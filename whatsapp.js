@@ -2,7 +2,9 @@ var db;
 var timer;
 var selectedConversationId;
 
-document.getElementById('file-input').addEventListener('change', readSelectedFile, false);
+document
+  .getElementById("file-input")
+  .addEventListener("change", readSelectedFile, false);
 
 // Read the sqlite file selected in the open dialog
 function readSelectedFile(e) {
@@ -35,82 +37,116 @@ function displayConversationsList() {
                             ZWACHATSESSION.ZLASTMESSAGEDATE DESC
                           `);
 
-  var html = '';
-  while(stmt.step()) {
+  var html = "";
+  while (stmt.step()) {
     var row = stmt.getAsObject();
-    var lastMessageDate = new Date((978307200 + row['ZLASTMESSAGEDATE']) * 1000);
+    var lastMessageDate = new Date(
+      (978307200 + row["ZLASTMESSAGEDATE"]) * 1000
+    );
 
-    html += '<div class="conversation" id="' + row['Z_PK'] + '">';
-    html += '<a onclick="displayConversationMessages(' + row['Z_PK'] + ')" href="#">';
-    html += '<div class="partner-name">' + row['ZPARTNERNAME'] + '</div>';
-    html += '<div class="last-message-date">' + lastMessageDate.toLocaleDateString() + '</div>'
-    html += '</a>';
-    html += '</div>';
+    html += '<div class="conversation" id="' + row["Z_PK"] + '">';
+    html +=
+      '<a onclick="displayConversationMessages(' + row["Z_PK"] + ')" href="#">';
+    html += '<div class="partner-name">' + row["ZPARTNERNAME"] + "</div>";
+    html +=
+      '<div class="last-message-date">' +
+      lastMessageDate.toLocaleDateString() +
+      "</div>";
+    html += "</a>";
+    html += "</div>";
   }
 
-  document.getElementById('bottom-left-pane').innerHTML = html;
+  document.getElementById("bottom-left-pane").innerHTML = html;
 }
 
 // Display the selected conversation in the right pane
 function displayConversationMessages(id) {
   selectedConversationId = id;
-
+  console.log(id);
   var sql = ` SELECT
                 ZGROUPEVENTTYPE,
                 replace(ZTEXT, '\n', '<br>') AS ZTEXT,
                 ZISFROMME,
                 ZGROUPMEMBER,
                 ZMESSAGEDATE,
-                ZPUSHNAME
+                ZPUSHNAME,
+                ZFROMJID
               FROM
                 ZWAMESSAGE
               WHERE
                 ZCHATSESSION = $ZCHATSESSION
-            `
+            `;
 
-  var filter = document.getElementById('filter-field').value;
+  var filter = document.getElementById("filter-field").value;
   if (filter) {
-    sql += ' AND (ZTEXT LIKE $filter COLLATE NOCASE OR ZPUSHNAME LIKE $filter COLLATE NOCASE)';
+    sql +=
+      " AND (ZTEXT LIKE $filter COLLATE NOCASE OR ZPUSHNAME LIKE $filter COLLATE NOCASE)";
   }
 
   var stmt = db.prepare(sql);
-  stmt.bind({$ZCHATSESSION:id, $filter:'%' + filter + '%'});
+  stmt.bind({ $ZCHATSESSION: id, $filter: "%" + filter + "%" });
 
-  var html = '';
+  var html = "";
   var previousMessageDate;
   var nbMessages = 0;
 
-  while(stmt.step()) {
+  while (stmt.step()) {
     row = stmt.getAsObject();
-    if (row['ZGROUPEVENTTYPE'] != 0 || !row['ZTEXT']) {
+    console.log(row);
+    if (!row["ZTEXT"]) {
       continue;
     }
 
-    var messageDate = new Date((978307200 + row['ZMESSAGEDATE']) * 1000);
-    if (!previousMessageDate || messageDate.getDate() != previousMessageDate.getDate() || messageDate.getMonth() != previousMessageDate.getMonth()) {
+    var messageDate = new Date((978307200 + row["ZMESSAGEDATE"]) * 1000);
+    if (
+      !previousMessageDate ||
+      messageDate.getDate() != previousMessageDate.getDate() ||
+      messageDate.getMonth() != previousMessageDate.getMonth()
+    ) {
       previousMessageDate = messageDate;
-      html += '<div class="message timestamp">' + messageDate.toLocaleDateString() + '</div>';
+      html +=
+        '<div class="message timestamp">' +
+        messageDate.toLocaleDateString() +
+        "</div>";
     }
 
-    html += '<div class="message ' + (row['ZISFROMME'] == 1 ? 'message-from-me' : 'message-from-other') + '">';
+    html +=
+      '<div class="message ' +
+      (row["ZISFROMME"] == 1 ? "message-from-me" : "message-from-other") +
+      '">';
 
-    if (row['ZISFROMME'] == 0 && row['ZGROUPMEMBER']) {
-      html += '<div class="from-name-in-group">' + row['ZPUSHNAME'] + '</div>';
+    if (row["ZISFROMME"] == 0 && row["ZGROUPMEMBER"]) {
+      html += '<div class="from-name-in-group">';
+      if (row["ZPUSHNAME"]) {
+        html += row["ZPUSHNAME"];
+      } else {
+        html += row["ZFROMJID"].split("-")[0];
+      }
+      html += "</div>";
     }
 
-    html += row['ZTEXT'];
-    html += '</div>';
+    html += row["ZTEXT"];
+    html += "</div>";
 
     nbMessages++;
   }
 
-  document.getElementById('bottom-right-pane').innerHTML = html;
-  document.getElementById('conversation-title').innerHTML = document.getElementById(id).getElementsByClassName('partner-name')[0].innerHTML + ' (<span class="bold">' + nbMessages + (filter ? ' - filtered' : '') + '</span>)';
+  document.getElementById("bottom-right-pane").innerHTML = html;
+  document.getElementById("conversation-title").innerHTML =
+    document.getElementById(id).getElementsByClassName("partner-name")[0]
+      .innerHTML +
+    ' (<span class="bold">' +
+    nbMessages +
+    (filter ? " - filtered" : "") +
+    "</span>)";
 }
 
 function filterFieldChanged() {
   if (selectedConversationId) {
     clearTimeout(timer);
-    timer = setTimeout(displayConversationMessages.bind(null, selectedConversationId), 750);
+    timer = setTimeout(
+      displayConversationMessages.bind(null, selectedConversationId),
+      750
+    );
   }
 }

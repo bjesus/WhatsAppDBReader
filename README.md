@@ -1,3 +1,5 @@
+This is just a fork of WhatsAppDBReader that includes a couple of bug fixes and is hosted on GitHub Pages. [Use it here](https://bjesus.github.io/WhatsAppDBReader/).
+
 # WhatsAppDBReader
 
 Simple web page that can read and display a WhatsApp database (iOS version only).
